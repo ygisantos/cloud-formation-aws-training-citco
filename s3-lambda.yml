@@ -18,6 +18,10 @@ Parameters:
     Description: "Handler of the lambda function"
     Type: "String"
     Default: "s3_lambda.handler"
+  s3BucketToMonitor:
+    Description: "S3 Bucket Name we will use to monitor the events"
+    Type: String
+    Default: "yms-trn-s3lambda-int"
   
 
 Resources: 
@@ -74,3 +78,28 @@ Resources:
   # ====================================
   # DYNAMIC LAMBDA ROLE
   # ====================================
+
+
+
+  myS3Bucket:
+    Type: AWS::S3::Bucket
+    DependsOn: s3LambdaInvokePermission
+    Properties:
+      BucketName: !Ref s3BucketToMonitor
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: "s3:ObjectCreated:*"
+            Function: !GetAtt myLambda.Arn
+
+  # Required to allow s3 to invoke a lambda
+  s3LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"         # to allows invoke of lambda
+      FunctionName: !GetAtt myLambda.Arn      # Lambda to invoke
+      Principal: "s3.amazonaws.com"           # who will invoke the lambda
+      SourceAccount: !Ref "AWS::AccountId"    # DO NOT CHANGE
+      # DO NOT CHANGE EXCEPT FOR s3 (Service)
+      SourceArn: !Join ["", ["arn:aws:s3:::", !Ref s3BucketToMonitor]]
+
+  
