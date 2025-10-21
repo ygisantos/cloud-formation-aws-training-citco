@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "S3 to EC2 Integration Sample"
+
+Parameters: 
+  s3BucketName:
+    Description: "S3 Bucket Name"
+    Type: String
+    Default: "yms-trn-mycfn-s3-ec2-integration"
+  amiId:
+    Description: "EC2 AMI ID"
+    Type: "String"
+    Default: "ami-0341d95f75f311023"
+  instanceType:
+    Description: "EC2 Instance Type"
+    Type: "String"
+    Default: "t3.micro"
+    AllowedValues:
+      - "t3.micro"
+      - "t3.small"
+  keyPairName:
+    Description: "EC2 KeyPair Name"
+    Type: "String"
+    Default: "aws-trm-2025"
+
+Resources: 
+  myS3Bucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: !Ref s3BucketName
+ 
+  ec2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      BlockDeviceMappings: 
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            VolumeSize: 8
+      ImageId: !Ref amiId
+      InstanceType: !Ref instanceType
+      KeyName: !Ref keyPairName
+      SecurityGroupIds: 
+        - !GetAtt ec2SecurityGroup.GroupId 
+      IamInstanceProfile: !Ref ec2InstanceProfile
+
+  ec2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "CFN Linux Server Security Group"
+      GroupName: "cfnLinuxSecGrp"
+      SecurityGroupEgress: 
+        - CidrIp: "0.0.0.0/0"
+          Description: "Allow All Outbound"
+          FromPort: -1
+          IpProtocol: -1
+          ToPort: -1
+      SecurityGroupIngress: 
+        - CidrIp: "0.0.0.0/0"
+          Description: "Allow SSH"
+          FromPort: 22
+          IpProtocol: "tcp"
+          ToPort: 22
+      VpcId: "vpc-0d95196e9a48a27b0"
+
+  s3Ec2Role:
+    Type: AWS::IAM::Role
+    DependsOn: myS3Bucket
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: "s3Ec2Policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - "s3:GetObject"
+                  - "s3:ListBucket"
+                  - "s3:PutObject"
+                Resource: 
+                  - !GetAtt myS3Bucket.Arn
+                  - !Join ["", [!GetAtt myS3Bucket.Arn, "/*"] ]
+      Description: "S3 to EC2 Integration using CFN"
+      RoleName: "s3Ec2RoleCfn"
+      
+  ec2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: 
+        - !Ref s3Ec2Role

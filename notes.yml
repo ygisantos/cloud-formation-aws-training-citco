@@ -1,0 +1,102 @@
+
+Resources:
+
+  # ===============================================
+  # ROLES FOR ACCESSING BUCKET FROM S2
+  # ===============================================
+  s3Ec2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"           
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: "s3Ec2Policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - "s3:GetObject"
+                  - "s3:ListBucket"
+                  - "s3:PutObject"
+                Resource: 
+                  - !GetAtt myS3Bucket.Arn
+                  - !Join ["", [!GetAtt myS3Bucket.Arn, "/*"] ]
+      Description: "S3 to EC2 Integration using CFN"
+      RoleName: "s3Ec2RoleCfn"
+      
+  ec2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: 
+        - !Ref s3Ec2Role
+  # ===============================================
+  # ROLES FOR ACCESSING BUCKET FROM S2
+  # ===============================================
+
+
+
+
+
+
+
+  myLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: "ysm-trn-cfn-scripts"       # bucket name
+        S3Key: "lambda/helloWorld.zip"        # path of the zipped lambda
+      Description: "Sample Lambda using CFN"  # description of the lambda
+      FunctionName: !Ref functionName         # name of lambda
+      Handler: "fnHello.handler"              # fileName.functionName
+      Role: !GetAtt lambdaFunctionRole.Arn    # arn of the role
+      Runtime: "python3.12"                   # language to use 
+      Timeout: 60  
+
+
+
+
+
+  # ====================================
+  # DYNAMIC LAMBDA ROLE
+  # ====================================
+  lambdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: !Join [" ", ["IAM Role for ", !Ref functionName, "lambda function"]]
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"           
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      RoleName: !Join ["-", [!Ref functionName, "lambda", "role"]]
+      Policies:
+        - PolicyName: !Join ["-", [!Ref functionName, "execution", "policy"]]
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - "logs:CreateLogGroup"
+                Resource: 
+                  - "arn:aws:logs:*:*:*"    
+              - Effect: Allow
+                Action: 
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: 
+                  - !Join ["", ["arn:aws:logs:*:*:log-group:/aws/lambda/", !Ref functionName, ":*"] ]  
+  # ====================================
+  # DYNAMIC LAMBDA ROLE
+  # ====================================

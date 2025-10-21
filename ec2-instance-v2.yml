@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "EC2 Instance using cloud formation"
+
+Parameters: 
+  amiId:
+    Description: "EC2 AMI ID"
+    Type: "String"
+    Default: "ami-0e1d35993cb249cee"
+  instanceType:
+    Description: "EC2 Instance Type"
+    Type: "String"
+    Default: "t3.micro"
+    AllowedValues:
+      - "t3.micro"
+      - "t3.small"
+  securityGroupId:
+    Description: "Security Group ID"
+    Type: "String"
+    Default: "sg-060ad1614f6e62358"
+  keyPairName:
+    Description: "EC2 KeyPair Name"
+    Type: "String"
+    Default: "aws-trn-2025-oregon"
+
+
+Resources: 
+  ec2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      BlockDeviceMappings: 
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            VolumeSize: 8
+      ImageId: !Ref amiId
+      InstanceType: !Ref instanceType
+      KeyName: !Ref keyPairName
+      SecurityGroupIds: 
+        - !GetAtt ec2SecurityGroup.GroupId #GetAtt retrieves the data from property
+
+  ec2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "CFN Linux Server Security Group"
+      GroupName: "cfnLinuxSec"
+      SecurityGroupEgress: 
+        - CidrIp: "0.0.0.0/0"
+          Description: "Allow All Outbound"
+          FromPort: -1
+          IpProtocol: -1
+          ToPort: -1
+      SecurityGroupIngress: 
+        - CidrIp: "0.0.0.0/0"
+          Description: "Allow HTTP"
+          FromPort: 80
+          IpProtocol: "tcp"
+          ToPort: 80
+        - CidrIp: "0.0.0.0/0"
+          Description: "Allow SSH"
+          FromPort: 22
+          IpProtocol: "tcp"
+          ToPort: 22
+      VpcId: "vpc-0e377c5904682d43d" #secgroup -> VPC ID

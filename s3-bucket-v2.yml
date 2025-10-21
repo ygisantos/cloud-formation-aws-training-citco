@@ -1,0 +1,14 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Sample S3 Bucket using cloud formation"
+
+Parameters:
+  s3BucketName:
+    Description: "hehe"
+    Type: String
+    Default: "yms-trn-mycfn-bucket"
+
+Resources: 
+  myS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref s3BucketName
