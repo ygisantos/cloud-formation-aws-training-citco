@@ -77,6 +77,29 @@ Parameters:
 Resources: 
 
   # ================================
+  # DYNAMODB RESOURCE
+  # ================================
+  cardDatabaseTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions: 
+        - AttributeName: "card_no"
+          AttributeType: "S"
+        - AttributeName: "card_status"
+          AttributeType: "S"
+        - AttributeName: "account_name"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "card_no"
+          KeyType: "S"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      TableClass: "STANDARD"
+      TableName: "card_accounts_cfn"
+
+
+  # ================================
   # LIST CARD RESOURCE
   # ================================
   listRestApiResource:
