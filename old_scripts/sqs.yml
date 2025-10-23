@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Sample SQS Queue using CFN"
+
+Parameters: 
+  queueName:
+    Type: "String"
+    Description: "SQS Queue Name"
+    Default: "s3EventsQueue"
+
+
+Resources: 
+  mySqs:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref queueName
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt mySqsDLQ.Arn
+        maxReceiveCount: 3
+      VisibilityTimeout: 10
+
+  # DQL OF THE mySqs
+  mySqsDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Join ["-", [!Ref queueName, "DLQ"] ]
+      SqsManagedSseEnabled: false
+      VisibilityTimeout: 10

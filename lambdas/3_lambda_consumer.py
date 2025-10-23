@@ -1,7 +1,7 @@
 import json
 
 def handler(event, context):
-    print("S3 Event!")
+    print("Event received")
     print(json.dumps(event, indent=2))
-    return "Happy birthday janna"
     
+    return "ok"
