@@ -76,22 +76,18 @@ Parameters:
 
 Resources: 
 
-  # ================================
-  # DYNAMODB RESOURCE
-  # ================================
+  #╭────────────────────────────────────────────────────────╮
+  #│                   DYNAMODB RESOURCE                    │
+  #╰────────────────────────────────────────────────────────╯
   cardDatabaseTable:
     Type: AWS::DynamoDB::Table
     Properties:
       AttributeDefinitions: 
         - AttributeName: "card_no"
           AttributeType: "S"
-        - AttributeName: "card_status"
-          AttributeType: "S"
-        - AttributeName: "account_name"
-          AttributeType: "S"
       KeySchema:
         - AttributeName: "card_no"
-          KeyType: "S"
+          KeyType: "HASH"
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
@@ -99,9 +95,9 @@ Resources:
       TableName: "card_accounts_cfn"
 
 
-  # ================================
-  # LIST CARD RESOURCE
-  # ================================
+  # ╭────────────────────────────────────────────────────────╮
+  # │                   LIST CARD RESOURCE                   │
+  # ╰────────────────────────────────────────────────────────╯
   listRestApiResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -199,9 +195,10 @@ Resources:
 
 
 
-  # ================================
-  # REGISTER CARD RESOURCE
-  # ================================
+  # ╭────────────────────────────────────────────────────────╮
+  # │                 REGISTER CARD RESOURCE                 │
+  # ╰────────────────────────────────────────────────────────╯
+
   registerRestApiResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -316,7 +313,7 @@ Resources:
     Properties:
       ApiKeyRequired: false
       AuthorizationType: "NONE"
-      HttpMethod: "PUT"
+      HttpMethod: "POST"
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: "POST" # ALWAYS POST
@@ -422,7 +419,7 @@ Resources:
           ResourcePath: "/list"
         - HttpMethod: "POST"
           ResourcePath: "/register"
-        - HttpMethod: "PUT"
+        - HttpMethod: "POST"
           ResourcePath: "/update-status"
       RestApiId: !Ref restApi
       StageName: "dev"
@@ -436,4 +433,21 @@ Resources:
     Properties:
       RestApiId: !Ref restApi
 
-         
+  cardDatabaseTablePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: "card_account_read_write_cfn" 
+      PolicyDocument: 
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: 
+              - "dynamodb:PutItem"
+              - "dynamodb:UpdateItem"
+              - "dynamodb:GetItem"
+              - "dynamodb:Scan"
+            Resource: !GetAtt cardDatabaseTable.Arn
+      Roles:
+        - !Ref listLambdaFunctionRole
+        - !Ref registerLambdaFunctionRole
+        - !Ref updateStatusLambdaFunctionRole

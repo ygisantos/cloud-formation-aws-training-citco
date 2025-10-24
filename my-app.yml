@@ -1,0 +1,14 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "My Lambda Application"
+
+Resources: 
+  lambdaApp1:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: "https://ysm-trn-cfn-scripts.s3.us-east-1.amazonaws.com/template/lambda-function.yml"
+      Parameters: 
+        - functionName: "fnTestTemplateCfn"
+        - s3Bucket: "ysm-trn-cfn-scripts"
+        - lambdaZipFile: "fn_card_list_cfn_v0.zip"
+        - lambdaHandler: "fn_card_list_cfn.handler"
+        - functionDescription: "Test Template"

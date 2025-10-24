@@ -1,0 +1,81 @@
+Policies:
+  - PolicyName: GeneralLambdaExecutionPolicy
+    PolicyDocument:
+      Version: "2012-10-17"
+      Statement:
+        # -------------------------------
+        # ✅ CloudWatch Logs - For Lambda logging
+        # -------------------------------
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: arn:aws:logs:*:*:*
+
+        # -------------------------------
+        # ✅ S3 - Accessing buckets and objects
+        # -------------------------------
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:ListBucket
+            - s3:GetBucketLocation
+          Resource:
+            - arn:aws:s3:::*
+            - arn:aws:s3:::*/*
+
+        # -------------------------------
+        # ✅ Lambda - Invoking or managing other functions
+        # -------------------------------
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
+            - lambda:GetFunction
+            - lambda:GetFunctionConfiguration
+            - lambda:ListVersionsByFunction
+          Resource: arn:aws:lambda:*:*:function:*
+
+        # -------------------------------
+        # ✅ SQS - Sending/receiving queue messages
+        # -------------------------------
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+            - sqs:GetQueueUrl
+          Resource: arn:aws:sqs:*:*:*
+
+        # -------------------------------
+        # ✅ API Gateway - Invoking REST/HTTP endpoints
+        # -------------------------------
+        - Effect: Allow
+          Action:
+            - execute-api:Invoke
+          Resource: arn:aws:execute-api:*:*:*/*/*/*
+
+        # -------------------------------
+        # ✅ DynamoDB - Common read/write operations
+        # -------------------------------
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:DescribeTable
+          Resource: arn:aws:dynamodb:*:*:table/*
+
+        # -------------------------------
+        # ✅ CloudWatch Metrics (optional) - For custom metrics
+        # -------------------------------
+        - Effect: Allow
+          Action:
+            - cloudwatch:PutMetricData
+          Resource: "*"

@@ -1,0 +1,179 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Lambda Function with an IAM Basic Execution Role Template"
+
+Parameters:
+
+  # LAMBDA PARAMETERS
+  # Example: fnGetTableCfn
+  functionName:
+    Description: "Name of the Lambda Function"
+    Type: "String"
+  # Example: ysm-trn-cfn-scripts
+  s3Bucket:
+    Description: "S3 bucket of the lambda function"
+    Type: "String"
+  # Example: get_table_cfn_v1.zip
+  lambdaZipFile:
+    Description: "Zip file path of the lambda function in S3"
+    Type: "String"
+  # Example: get_table_cfn.handler  ||  fileName.functionName
+  lambdaHandler:
+    Description: "Handler of the lambda function"
+    Type: "String"
+  # Example: This is for retrieving a table
+  functionDescription:
+    Description: "Lambda Function Description"
+    Type: "String"
+  
+
+  # API PARAMETERS
+  # Example: !Ref restApi
+  restApiId:
+    Type: "String"
+    Description: "ID of the REST API"
+  # Example: !GetAtt restApi.RootResourceId
+  parentResourceId:
+    Type: "String"
+    Description: "Parent Resource ID (usually Root Resource ID)"
+  # Example: /get  /update    /register
+  resourcePath:
+    Type: "String"
+    Description: "Path part for the resource (example: '/get', '/create')"
+  # Example: GET  POST   PUT
+  httpMethod:
+    Type: "String"
+    Description: "HTTP method for the API method"
+
+  
+
+Resources: 
+  lambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref s3Bucket                              # bucket name
+        S3Key: !Join ["/", ["lambda", !Ref lambdaZipFile]]   # path of the zipped lambda
+      Description: !Ref functionDescription                  # description of the lambda
+      FunctionName: !Ref functionName                        # name of lambda
+      Handler: !Ref lambdaHandler                            # fileName.functionName
+      Role: !GetAtt lambdaFunctionRole.Arn                   # arn of the role
+      Runtime: "python3.12"                                  # language to use 
+      Timeout: 60                                            # default is 3 seconds
+
+
+
+
+  lambdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: !Join [" ", ["IAM Role for ", !Ref functionName, "lambda function"]]
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"           
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      RoleName: !Join ["-", [!Ref functionName, "lambda", "role"]]
+      Policies:
+        - PolicyName: !Join ["-", [!Ref functionName, "execution", "policy"]]
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - "logs:CreateLogGroup"
+                Resource: 
+                  - "arn:aws:logs:*:*:*"    
+              - Effect: Allow
+                Action: 
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: 
+                  - !Join ["", ["arn:aws:logs:*:*:log-group:/aws/lambda/", !Ref functionName, ":*"] ]  
+
+  
+  # ================================
+  # API GATEWAY RESOURCE
+  # ================================
+  apiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !Ref parentResourceId
+      PathPart: !Ref resourcePath
+      RestApiId: !Ref restApiId
+
+  # ================================
+  # API GATEWAY METHOD
+  # ================================
+  apiMethod:
+    Type: AWS::ApiGateway::Method
+    DependsOn: lambdaFunction
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: "NONE"
+      HttpMethod: !Ref httpMethod
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: "POST"
+        Uri: !Join [
+          "", 
+          [
+            "arn:aws:apigateway:", 
+            !Ref "AWS::Region", 
+            ":lambda:path/2015-03-31/functions/", 
+            !GetAtt lambdaFunction.Arn, 
+            "/invocations"
+          ] 
+        ]
+      ResourceId: !Ref apiResource
+      RestApiId: !Ref restApiId
+
+  # ================================
+  # LAMBDA PERMISSION
+  # ================================
+  lambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Ref functionName
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Join [
+        "", [
+          "arn:aws:execute-api:", 
+          !Ref "AWS::Region", 
+          ":", 
+          !Ref "AWS::AccountId", 
+          ":", 
+          "!Ref restApiId", 
+          "/*"
+        ] 
+      ]
+
+
+Outputs:
+  lambda:
+    Description: "Lambda Value"
+    Value: !Ref lambdaFunction
+
+  lambdaArn:
+    Description: "Arn of the lambda"
+    Value: !GetAtt lambdaFunction.Arn
+
+  IAMRole:
+    Description: "Lambda Function Role Value"
+    Value: !Ref lambdaFunctionRole
+
+  IAMRoleArn:
+    Description: "Arn of the Lambda Function Role"
+    Value: !GetAtt lambdaFunctionRole.Arn
+
+  apiResourceId:
+    Description: "ID of the API Gateway Resource"
+    Value: !Ref apiResource
+
+  apiMethodId:
+    Description: "ID of the API Gateway Method"
+    Value: !Ref apiMethod

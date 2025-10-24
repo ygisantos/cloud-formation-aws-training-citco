@@ -1,0 +1,221 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Lambda API Gateway Example"
+ 
+Parameters:
+  restApiName:
+    Type: "String"
+    Description: "The name of the REST API"
+    Default: "cardApiCfn"
+
+  lambdaS3Bucket:
+    Description: "S3 bucket of the lambda function"
+    Type: "String"
+    Default: "ysm-trn-cfn-scripts"
+
+
+  # ================================
+  # LIST LAMBDA PARAMS
+  # ================================
+  listFunctionName:
+    Description: "Name of the Lambda List Function"
+    Type: "String"
+    Default: "fnLambdaListCfn"
+  listLambdaZipFile:
+    Description: "Zip file path of the list lambda function in S3"
+    Type: "String"
+    Default: "fn_card_list_cfn_v0.zip"
+  listLambdaHandler:
+    Description: "Handler of the list lambda function"
+    Type: "String"
+    Default: "fn_card_list_cfn.handler"
+
+
+  # ================================
+  # STATUS UPDATE LAMBDA PARAMS
+  # ================================
+  updateStatusFunctionName:
+    Description: "Name of the Lambda update status Function"
+    Type: "String"
+    Default: "fnLambdaUpdateStatusCfn"
+  updateStatusLambdaZipFile:
+    Description: "Zip file path of the update status lambda function in S3"
+    Type: "String"
+    Default: "fn_card_status_update_cfn_v0.zip"
+  updateStatusLambdaHandler:
+    Description: "Handler of the update status lambda function"
+    Type: "String"
+    Default: "fn_card_status_update_cfn.handler"
+
+
+
+  # ================================
+  # REGISTER LAMBDA PARAMS
+  # ================================
+  registerFunctionName:
+    Description: "Name of the Lambda register Function"
+    Type: "String"
+    Default: "fnLambdaRegisterCfn"
+  registerLambdaZipFile:
+    Description: "Zip file path of the register lambda function in S3"
+    Type: "String"
+    Default: "fn_card_reg_cfn_v0.zip"
+  registerLambdaHandler:
+    Description: "Handler of the register lambda function"
+    Type: "String"
+    Default: "fn_card_register_cfn.handler"
+
+
+Resources: 
+
+  #╭────────────────────────────────────────────────────────╮
+  #│                   DYNAMODB RESOURCE                    │
+  #╰────────────────────────────────────────────────────────╯
+  cardDatabaseTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions: 
+        - AttributeName: "card_no"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "card_no"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      TableClass: "STANDARD"
+      TableName: "card_accounts_cfn"
+
+
+  # ╭────────────────────────────────────────────────────────╮
+  # │                   LIST CARD RESOURCE                   │
+  # ╰────────────────────────────────────────────────────────╯
+  listLambdaStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: "https://ysm-trn-cfn-scripts.s3.us-east-1.amazonaws.com/template/lambda-function.yml"
+      Parameters:
+        functionName: !Ref listFunctionName
+        s3Bucket: !Ref lambdaS3Bucket
+        lambdaZipFile: !Ref listLambdaZipFile
+        lambdaHandler: !Ref listLambdaHandler
+        functionDescription: "Sample Lambda List API using CFN"
+
+  listApiResourceStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: "https://ysm-trn-cfn-scripts.s3.us-east-1.amazonaws.com/template/api-resource-method.yml"
+      Parameters:
+        restApiId: !Ref restApi
+        parentResourceId: !GetAtt restApi.RootResourceId
+        resourcePath: "list"
+        httpMethod: "GET"
+        lambdaFunctionArn: !GetAtt listLambdaStack.Outputs.lambdaArn
+        lambdaFunctionName: !GetAtt listLambdaStack.Outputs.lambda
+
+
+  # ╭────────────────────────────────────────────────────────╮
+  # │                 REGISTER CARD RESOURCE                 │
+  # ╰────────────────────────────────────────────────────────╯
+  registerLambdaStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: "https://ysm-trn-cfn-scripts.s3.us-east-1.amazonaws.com/template/lambda-function.yml"
+      Parameters:
+        functionName: !Ref registerFunctionName
+        s3Bucket: !Ref lambdaS3Bucket
+        lambdaZipFile: !Ref registerLambdaZipFile
+        lambdaHandler: !Ref registerLambdaHandler
+        functionDescription: "Sample Lambda Register API using CFN"
+
+  registerApiResourceStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: "https://ysm-trn-cfn-scripts.s3.us-east-1.amazonaws.com/template/api-resource-method.yml"
+      Parameters:
+        restApiId: !Ref restApi
+        parentResourceId: !GetAtt restApi.RootResourceId
+        resourcePath: "register"
+        httpMethod: "POST"
+        lambdaFunctionArn: !GetAtt registerLambdaStack.Outputs.lambdaArn
+        lambdaFunctionName: !GetAtt registerLambdaStack.Outputs.lambda
+
+  
+  # ================================
+  # UPDATE STATUS CARD RESOURCE
+  # ================================
+  updateStatusLambdaStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: "https://ysm-trn-cfn-scripts.s3.us-east-1.amazonaws.com/template/lambda-function.yml"
+      Parameters:
+        functionName: !Ref updateStatusFunctionName
+        s3Bucket: !Ref lambdaS3Bucket
+        lambdaZipFile: !Ref updateStatusLambdaZipFile
+        lambdaHandler: !Ref updateStatusLambdaHandler
+        functionDescription: "Sample Lambda Update Status API using CFN"
+
+  updateStatusApiResourceStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: "https://ysm-trn-cfn-scripts.s3.us-east-1.amazonaws.com/template/api-resource-method.yml"
+      Parameters:
+        restApiId: !Ref restApi
+        parentResourceId: !GetAtt restApi.RootResourceId
+        resourcePath: "update-status"
+        httpMethod: "POST"
+        lambdaFunctionArn: !GetAtt updateStatusLambdaStack.Outputs.lambdaArn
+        lambdaFunctionName: !GetAtt updateStatusLambdaStack.Outputs.lambda
+
+
+  # ================================
+  # GENERAL RESOURCE
+  # ================================
+
+  restApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Description: "Sample Rest API using CFN"
+      Name: !Ref restApiName
+
+  restApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref restApiStageDeployment
+      Description: "Dev deployment stage"
+      MethodSettings: 
+        - HttpMethod: "GET"
+          ResourcePath: "/list"
+        - HttpMethod: "POST"
+          ResourcePath: "/register"
+        - HttpMethod: "POST"
+          ResourcePath: "/update-status"
+      RestApiId: !Ref restApi
+      StageName: "dev"
+
+  restApiStageDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - listApiResourceStack
+      - registerApiResourceStack
+      - updateStatusApiResourceStack
+    Properties:
+      RestApiId: !Ref restApi
+
+  cardDatabaseTablePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: "card_account_read_write_cfn" 
+      PolicyDocument: 
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: 
+              - "dynamodb:PutItem"
+              - "dynamodb:UpdateItem"
+              - "dynamodb:GetItem"
+              - "dynamodb:Scan"
+            Resource: !GetAtt cardDatabaseTable.Arn
+      Roles:
+        - !GetAtt listLambdaStack.Outputs.IAMRole
+        - !GetAtt registerLambdaStack.Outputs.IAMRole
+        - !GetAtt updateStatusLambdaStack.Outputs.IAMRole

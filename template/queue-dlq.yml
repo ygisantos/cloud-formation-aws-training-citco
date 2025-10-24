@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "SQS Queue with Dead Letter Queue (DLQ) using CloudFormation"
+
+Parameters:
+
+  #example emailQueue
+  queueName:
+    Type: String
+    Description: "Name of the SQS Queue"
+
+  # Example: 120
+  visibilityTimeout:
+    Type: Number
+    Description: "Visibility timeout for the main queue (in seconds)"
+
+  # Example: 3
+  maxReceiveCount:
+    Type: Number
+    Description: "Number of times a message can be received before going to DLQ"
+
+Resources:
+  # ================================
+  # Dead Letter Queue
+  # ================================
+  mySqsDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Join ["-", [!Ref queueName, "DLQ"]]
+      VisibilityTimeout: !Ref visibilityTimeout
+      SqsManagedSseEnabled: false
+      MessageRetentionPeriod: 1209600 # 14 days
+
+  # ================================
+  # Main SQS Queue
+  # ================================
+  mySqs:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref queueName
+      VisibilityTimeout: !Ref visibilityTimeout
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt mySqsDLQ.Arn
+        maxReceiveCount: !Ref maxReceiveCount
+
+Outputs:
+  MainQueueName:
+    Description: "Name of the main SQS queue"
+    Value: !Ref mySqs
+
+  MainQueueUrl:
+    Description: "URL of the main SQS queue"
+    Value: !Ref mySqs
+
+  MainQueueArn:
+    Description: "ARN of the main SQS queue"
+    Value: !GetAtt mySqs.Arn
+
+  DLQName:
+    Description: "Name of the Dead Letter Queue"
+    Value: !Ref mySqsDLQ
+
+  DLQUrl:
+    Description: "URL of the Dead Letter Queue"
+    Value: !Ref mySqsDLQ
+
+  DLQArn:
+    Description: "ARN of the Dead Letter Queue"
+    Value: !GetAtt mySqsDLQ.Arn
